@@ -24,6 +24,7 @@ M08 menambahkan file management aman untuk kebutuhan newsroom, dengan validasi M
 - `POST /api/files/upload` (multipart form-data: `upload_file`)
 - `GET /api/files/{file_id}/download`
 - `DELETE /api/files/{file_id}`
+- `GET /api/public/files/{file_id}/download` (untuk render media pada halaman publik)
 
 ## Permission
 

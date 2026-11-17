@@ -71,3 +71,30 @@ def test_file_upload_rejects_invalid_pdf_content(client, create_user, assign_per
         headers={settings.CSRF_HEADER_NAME: csrf_token},
     )
     assert upload_response.status_code == 400
+
+
+def test_public_file_download_works_without_auth(client, create_user, assign_permission_to_user) -> None:
+    create_user()
+    assign_permission_to_user(
+        user_email='admin@example.com',
+        permission_name='news.manage',
+        resource='news',
+        action='manage',
+    )
+    csrf_token = login_and_get_csrf(client)
+    upload_response = client.post(
+        '/api/files/upload',
+        files={'upload_file': ('public.pdf', b'%PDF-1.4\nsample\n', 'application/pdf')},
+        headers={settings.CSRF_HEADER_NAME: csrf_token},
+    )
+    assert upload_response.status_code == 201
+    file_id = upload_response.json()['id']
+
+    client.post(
+        '/api/auth/logout',
+        headers={settings.CSRF_HEADER_NAME: csrf_token},
+    )
+
+    public_download_response = client.get(f'/api/public/files/{file_id}/download')
+    assert public_download_response.status_code == 200
+    assert public_download_response.headers['content-type'].startswith('application/pdf')

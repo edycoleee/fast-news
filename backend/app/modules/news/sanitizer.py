@@ -39,8 +39,17 @@ def _convert_markdown_to_html(value: str) -> str:
     return converted
 
 
+def _normalize_file_download_urls(value: str) -> str:
+    return re.sub(
+        r'/api/files/(\d+)/download',
+        r'/api/public/files/\1/download',
+        value,
+    )
+
+
 def sanitize_news_html(value: str) -> str:
     normalized_value = _convert_markdown_to_html(value)
+    normalized_value = _normalize_file_download_urls(normalized_value)
     return bleach.clean(
         normalized_value,
         tags=ALLOWED_TAGS,

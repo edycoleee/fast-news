@@ -12,6 +12,7 @@ from .schemas import FileAssetResponse, FileDeleteResponse, FileListResponse
 from .service import FileService
 
 router = APIRouter(prefix='/api/files', tags=['files'])
+public_router = APIRouter(tags=['files'])
 
 MANAGE_FILE_PERMISSION = 'file.manage'
 MANAGE_NEWS_PERMISSION = 'news.manage'
@@ -53,6 +54,16 @@ async def upload_file(
 async def download_file(
     file_id: int,
     _: AuthSession = Depends(require_any_permission([MANAGE_FILE_PERMISSION, MANAGE_NEWS_PERMISSION])),
+    file_service: FileService = Depends(get_file_service),
+) -> FileResponse:
+    file_asset = await file_service.get_file_asset(file_id)
+    storage_path = file_service.get_storage_path(file_asset)
+    return FileResponse(path=storage_path, media_type=file_asset.mime_type, filename=file_asset.original_name)
+
+
+@public_router.get('/api/public/files/{file_id}/download', status_code=status.HTTP_200_OK)
+async def download_public_file(
+    file_id: int,
     file_service: FileService = Depends(get_file_service),
 ) -> FileResponse:
     file_asset = await file_service.get_file_asset(file_id)

@@ -98,7 +98,7 @@ export function AdminNewsPage() {
   }
 
   const onCopyMediaUrl = async (fileId) => {
-    const downloadUrl = `${API_BASE_URL}/api/files/${fileId}/download`
+    const downloadUrl = `${API_BASE_URL}/api/public/files/${fileId}/download`
     try {
       await navigator.clipboard.writeText(downloadUrl)
       setCopiedMediaUrl(downloadUrl)
@@ -122,7 +122,7 @@ export function AdminNewsPage() {
   }
 
   const onInsertMediaUrl = (fileId, originalName, mimeType) => {
-    const downloadUrl = `${API_BASE_URL}/api/files/${fileId}/download`
+    const downloadUrl = `${API_BASE_URL}/api/public/files/${fileId}/download`
     const safeLabel = originalName.replace(/"/g, '&quot;')
     const insertHtml = mimeType?.startsWith('image/')
       ? `<p><img src="${downloadUrl}" alt="${safeLabel}" title="${safeLabel}"></p>`

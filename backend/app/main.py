@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.modules.auth.router import router as auth_router
 from app.modules.categories.router import router as category_router
+from app.modules.files.router import public_router as public_files_router
 from app.modules.files.router import router as files_router
 from app.modules.news.router import router as news_router
 from app.modules.rbac.router import router as rbac_router
@@ -30,6 +31,7 @@ app.include_router(rbac_router)
 app.include_router(category_router)
 app.include_router(news_router)
 app.include_router(files_router)
+app.include_router(public_files_router)
 app.include_router(users_router)
 
 
