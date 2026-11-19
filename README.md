@@ -68,6 +68,65 @@ Lihat dokumen [docs/roadmap.md](docs/roadmap.md).
 - docs/: dokumentasi arsitektur, database, security, roadmap
 - .github/instructions/: aturan pengembangan dan milestone
 
+## Menggunakan repository ini sebagai boilerplate aplikasi baru
+
+Repository sumber boilerplate: https://github.com/edycoleee/fast-news
+
+### Opsi A (disarankan): pakai GitHub Template
+
+1. Buka repository sumber di GitHub.
+2. Klik **Use this template**.
+3. Buat repository baru (misalnya `my-news-app`).
+4. Clone repository baru ke lokal:
+
+```bash
+git clone https://github.com/<username>/my-news-app.git
+cd my-news-app
+```
+
+5. Sesuaikan identitas aplikasi:
+   - ganti nama proyek di `README.md` dan dokumentasi di folder `docs/`
+   - sesuaikan `.env` backend/frontend (database URL, CORS, cookie, domain)
+   - sesuaikan nama service/domain pada file Docker Compose dan Nginx jika diperlukan
+
+### Opsi B: clone boilerplate lalu reset riwayat Git (tanpa fork)
+
+Jika tidak memakai fitur template, gunakan langkah berikut:
+
+```bash
+# 1) Clone boilerplate
+git clone https://github.com/edycoleee/fast-news.git my-news-app
+cd my-news-app
+
+# 2) Hapus histori git lama
+rm -rf .git
+
+# 3) Inisialisasi repo baru
+git init
+git add .
+git commit -m "chore: initialize project from fast-news boilerplate"
+
+# 4) Hubungkan ke repo baru milik Anda
+git branch -M main
+git remote add origin https://github.com/<username>/my-news-app.git
+git push -u origin main
+```
+
+### Checklist setelah jadi repo baru
+
+- Jalankan stack development sesuai panduan pada README ini (backend + frontend + db).
+- Ubah semua credential default di file `.env`.
+- Jalankan migrasi:
+
+```bash
+cd backend
+alembic upgrade head
+```
+
+- Verifikasi endpoint health:
+  - `GET /api/health` harus `200 OK`.
+- Buat baseline commit untuk identitas aplikasi baru sebelum menambah fitur.
+
 ## Status saat ini
 
 M11 Security & Testing telah selesai untuk baseline keamanan. Milestone berikutnya: M12 Deployment.
