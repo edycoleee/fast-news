@@ -1,6 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
 import { AlertTriangle, CheckCircle2, Clock3, Users } from 'lucide-react'
 import { getMyPermissions } from '../api/rbacApi'
+import { Badge } from '../../../shared/components/ui/Badge'
+import { PageHeader } from '../../../shared/components/ui/PageHeader'
 
 const cards = [
   { label: 'Published news', value: '0', icon: CheckCircle2, color: 'text-success' },
@@ -17,10 +19,16 @@ export function AdminDashboardPage() {
   })
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
+      <PageHeader
+        eyebrow="Overview"
+        title="Dashboard"
+        description="Ringkasan operasional dan permission yang efektif untuk sesi saat ini."
+        actions={<Badge variant="primary">Live data</Badge>}
+      />
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {cards.map(({ label, value, icon: Icon, color }) => (
-          <article key={label} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <article key={label} className="surface-card p-5 transition duration-300 hover:-translate-y-0.5 hover:shadow-lift">
             <div className="flex items-start justify-between">
               <p className="text-sm text-slate-500">{label}</p>
               <Icon className={`h-5 w-5 ${color}`} />
@@ -30,9 +38,9 @@ export function AdminDashboardPage() {
         ))}
       </section>
 
-      <section className="rounded-xl border border-slate-200 bg-white">
-        <div className="border-b border-slate-200 px-4 py-3">
-          <h2 className="text-base font-semibold text-slate-900">Permission summary</h2>
+      <section className="surface-card overflow-hidden">
+        <div className="border-b border-slate-200 px-5 py-4">
+          <h2 className="text-base font-semibold text-slate-950">Permission summary</h2>
           <p className="text-sm text-slate-500">Permission aktif user login berdasarkan backend RBAC.</p>
         </div>
         <div className="p-4">

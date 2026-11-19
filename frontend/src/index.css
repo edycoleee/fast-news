@@ -6,7 +6,7 @@
   font-family: Inter, 'Segoe UI', sans-serif;
   line-height: 1.5;
   font-weight: 400;
-  color: #111827;
+  color: #0b1220;
   background-color: #f8fafc;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -23,6 +23,7 @@ body {
   min-width: 320px;
   min-height: 100vh;
   background: #f8fafc;
+  color: #0b1220;
 }
 
 #root {
@@ -31,4 +32,58 @@ body {
 
 * {
   box-sizing: border-box;
+}
+
+@layer base {
+  button,
+  a,
+  input,
+  textarea,
+  select {
+    @apply outline-none;
+  }
+
+  button,
+  a,
+  input,
+  textarea,
+  select {
+    @apply transition duration-200;
+  }
+
+  :focus-visible {
+    @apply ring-2 ring-primary/40 ring-offset-2;
+  }
+
+  ::selection {
+    @apply bg-primary/20 text-slate-950;
+  }
+}
+
+@layer components {
+  .surface-card {
+    @apply rounded-2xl border border-slate-200/80 bg-white shadow-card;
+  }
+
+  .field-control {
+    @apply w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary focus:ring-2 focus:ring-primary/15;
+  }
+
+  .button-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .button-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:border-slate-400 hover:bg-slate-50;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

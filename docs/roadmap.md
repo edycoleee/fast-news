@@ -174,6 +174,14 @@ Fokus utama:
 Output:
 - workflow approval atau persetujuan dapat tercatat
 
+Status:
+- **Selesai**
+- canvas Signature Pad admin telah terintegrasi
+- signature menyimpan user, berita opsional, purpose, file PNG privat, status, dan revocation metadata
+- create/revoke dilindungi RBAC dan CSRF serta dicatat dalam audit log
+- migrasi database, backend tests, frontend unit test, lint, dan production build telah dijalankan
+- detail implementasi: [docs/m09-signature.md](m09-signature.md)
+
 ### M10 — Comments
 Tujuan:
 - membangun interaksi publik dan moderasi komentar
@@ -187,6 +195,15 @@ Fokus utama:
 
 Output:
 - komentar publik bisa dibuat dan dimoderasi
+
+Status:
+- **Selesai**
+- komentar publik tamu tersimpan sebagai pending
+- hanya komentar approved tampil pada halaman berita
+- admin dapat meninjau, approve, reject, dan delete
+- moderation metadata dan audit log disimpan
+- permission registry mencakup `comment.read`, `comment.moderate`, `comment.delete`, dan `comment.manage`
+- detail implementasi: [docs/m10-comments.md](m10-comments.md)
 
 ### M11 — Security & Testing
 Tujuan:
@@ -207,6 +224,17 @@ Fokus utama:
 Output:
 - kualitas keamanan dan stabilitas siap untuk production baseline
 
+Status:
+- **Selesai untuk baseline M11**
+- menu Admin Settings untuk batas upload, signature, komentar, rate limit, dan login cooldown
+- runtime settings disimpan database dan perubahan diaudit
+- secrets/startup config tetap environment
+- rate limiter PostgreSQL berlaku pada login, public comment, file upload, dan signature upload
+- login failure threshold memicu temporary cooldown
+- dependency audit, backend suite, frontend test, lint, dan build telah dijalankan
+- CAPTCHA eksternal tidak diaktifkan tanpa provider terpercaya; tercatat sebagai keputusan security residual
+- detail: [docs/m11-security-testing.md](m11-security-testing.md)
+
 ### M12 — Deployment
 Tujuan:
 - menyiapkan stack siap deploy production
@@ -220,6 +248,45 @@ Fokus utama:
 
 Output:
 - aplikasi bisa dijalankan secara deployment-ready
+
+Tahapan detail (untuk eksekusi saat production):
+1. **Infrastructure baseline**
+   - siapkan host production dan struktur direktori deploy;
+   - pastikan secret/env production tidak berada di Git;
+   - aktifkan storage backup terenkripsi.
+2. **Compose production activation**
+   - jalankan service `db`, `backend`, `frontend`, `nginx` dari `docker-compose.prod.yml`;
+   - verifikasi health `/api/health` dan readiness `/api/readiness`.
+3. **TLS dan Nginx hardening**
+   - pasang certificate TLS production;
+   - aktifkan redirect HTTP→HTTPS;
+   - validasi header keamanan (HSTS/CSP/X-Content-Type-Options dan lainnya sesuai policy).
+4. **Ops scheduler (production only)**
+   - aktifkan scheduler host/orchestrator untuk backup harian:
+     `docker compose -f docker-compose.prod.yml --profile ops run --rm backup`;
+   - aktifkan scheduler untuk retention cleanup:
+     `docker compose -f docker-compose.prod.yml --profile ops run --rm cleanup`;
+   - dev/staging tetap manual atau ad-hoc.
+5. **Backup, retention, dan restore drill**
+   - verifikasi file backup `.dump` + checksum `.sha256`;
+   - cek audit event `retention.cleanup`;
+   - lakukan restore drill ke database khusus test/restore.
+6. **Security gate production**
+   - jalankan test, lint, dan build terakhir;
+   - jalankan dependency/security scan sesuai baseline M11;
+   - verifikasi CSRF/session/RBAC pada alur login-admin kritikal.
+7. **Go-live checklist**
+   - dokumentasikan jadwal job, lokasi log, owner on-call, dan runbook incident;
+   - catat evidence deployment (versi image, timestamp, hasil verifikasi).
+
+Acceptance M12:
+- semua service production berjalan stabil;
+- TLS aktif dan redirect HTTPS berhasil;
+- backup scheduler dan cleanup scheduler berjalan sukses;
+- restore drill terakhir sukses dan terdokumentasi;
+- monitoring minimum serta audit log dapat ditinjau admin.
+
+Referensi implementasi detail: [docs/m12.md](m12.md), [docs/backup-restore.md](backup-restore.md), [docs/tls-deployment.md](tls-deployment.md).
 
 ## Prinsip eksekusi tahapan
 

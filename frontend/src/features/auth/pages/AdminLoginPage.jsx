@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { loginSchema } from '../schemas/loginSchema'
 import { login } from '../api/authApi'
+import { Globe2, ShieldCheck } from 'lucide-react'
 
 export function AdminLoginPage() {
   const [formError, setFormError] = useState('')
@@ -46,11 +47,30 @@ export function AdminLoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-10">
-      <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-7 shadow-sm">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Admin access</p>
-        <h1 className="mt-2 text-2xl font-bold text-slate-900">Login NewsHub CMS</h1>
-        <p className="mt-2 text-sm text-slate-600">Gunakan akun admin yang sudah terdaftar di backend.</p>
+    <div className="flex min-h-screen items-center justify-center bg-slate-950 px-4 py-10">
+      <div className="w-full max-w-5xl overflow-hidden rounded-3xl border border-white/10 bg-white shadow-2xl lg:grid lg:grid-cols-[1.05fr_0.95fr]">
+        <div className="hidden bg-secondary p-10 text-white lg:flex lg:flex-col lg:justify-between">
+          <Link to="/" className="flex items-center gap-3">
+            <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/15">
+              <Globe2 className="h-5 w-5" />
+            </span>
+            <span className="text-lg font-bold">NewsHub CMS</span>
+          </Link>
+          <div>
+            <ShieldCheck className="h-10 w-10 text-teal-300" />
+            <h2 className="mt-5 max-w-sm text-3xl font-bold leading-tight">
+              Editorial control dengan akses yang aman dan terukur.
+            </h2>
+            <p className="mt-4 max-w-sm text-sm leading-6 text-blue-100">
+              Session aman, RBAC backend, audit trail, dan workflow editorial dalam satu workspace.
+            </p>
+          </div>
+          <p className="text-xs text-blue-100/70">Secure newsroom administration</p>
+        </div>
+        <div className="p-7 sm:p-10">
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Admin access</p>
+        <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-950">Masuk ke NewsHub</h1>
+        <p className="mt-2 text-sm text-slate-600">Gunakan akun admin yang terdaftar untuk mengakses workspace.</p>
 
         <form className="mt-6 space-y-4" onSubmit={handleSubmit(onSubmit)}>
           <div>
@@ -61,7 +81,7 @@ export function AdminLoginPage() {
               id="username_or_email"
               data-testid="login-username-input"
               type="text"
-              className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-primary"
+              className="field-control"
               {...register('username_or_email', { required: 'Username/email wajib diisi.' })}
             />
             {errors.username_or_email && <p className="mt-1 text-xs text-danger">{errors.username_or_email.message}</p>}
@@ -85,7 +105,7 @@ export function AdminLoginPage() {
               id="password"
               data-testid="login-password-input"
               type={showPassword ? 'text' : 'password'}
-              className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-primary"
+              className="field-control"
               {...register('password', { required: 'Password wajib diisi.' })}
             />
             {errors.password && <p className="mt-1 text-xs text-danger">{errors.password.message}</p>}
@@ -101,7 +121,7 @@ export function AdminLoginPage() {
             data-testid="login-submit-button"
             type="submit"
             disabled={loginMutation.isPending}
-            className="w-full rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-70"
+            className="button-primary w-full"
           >
             {loginMutation.isPending ? 'Signing in...' : 'Sign in'}
           </button>
@@ -111,6 +131,7 @@ export function AdminLoginPage() {
           <Link className="font-medium text-primary hover:underline" to="/">
             Back to landing page
           </Link>
+        </div>
         </div>
       </div>
     </div>

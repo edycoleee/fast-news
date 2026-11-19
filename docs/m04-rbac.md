@@ -2,21 +2,131 @@
 
 ## Tujuan milestone
 
-M04 memastikan kontrol akses dijalankan dari backend melalui role dan permission yang terstruktur.
+M04 memastikan kontrol akses dijalankan dari backend melalui role dan permission terstruktur, dapat diperluas setiap fitur, dan tetap dapat diaudit.
 
-## Scope implementasi
+## Model operasional
 
-- backend permission enforcement
-- API role/permission management untuk admin
-- API role assignment ke user
-- API membaca permission user
-- audit log untuk aksi RBAC penting
+Gunakan pola **Permission-as-Code + Role-as-Data**.
+
+- Developer menentukan permission yang tersedia untuk setiap modul.
+- Registry permission disinkronkan ke database secara idempotent.
+- Admin RBAC menentukan permission mana yang dimiliki role.
+- Admin RBAC menentukan role mana yang dimiliki user.
+- Backend endpoint memeriksa permission, bukan nama role.
+- Frontend hanya memakai permission untuk UX; frontend bukan otoritas keamanan.
+
+Alur:
+
+```text
+permissions.py module
+    -> permission registry
+    -> sync_permissions command
+    -> tabel permissions
+    -> role_permission
+    -> user_role
+    -> backend permission guard
+```
+
+## Standar permission
+
+Nama wajib mengikuti:
+
+```text
+<resource>.<action>
+```
+
+Contoh:
+
+```text
+signature.read
+signature.create
+signature.revoke
+signature.manage
+```
+
+`resource` dan `action` juga harus cocok dengan nama permission. Validasi dijalankan saat registry dimuat.
+
+`manage` disediakan untuk kompatibilitas/pengelolaan luas. Operasi sensitif seperti publish, revoke, delete, export, dan assign-role tetap sebaiknya memiliki action granular.
+
+## Registry per fitur
+
+Setiap modul backend wajib memiliki `permissions.py`:
+
+```text
+backend/app/modules/<feature>/
+├── permissions.py
+├── router.py
+├── service.py
+├── repository.py
+├── schemas.py
+└── tests/
+```
+
+Contoh:
+
+```python
+from app.core.permissions import FeaturePermission
+
+READ = 'signature.read'
+CREATE = 'signature.create'
+REVOKE = 'signature.revoke'
+
+PERMISSIONS = (
+    FeaturePermission(READ, 'signature', 'read'),
+    FeaturePermission(CREATE, 'signature', 'create'),
+    FeaturePermission(REVOKE, 'signature', 'revoke'),
+)
+```
+
+Manifest fitur kemudian didaftarkan di `app/modules/rbac/permission_registry.py`. Registry menolak nama duplikat dan mismatch `resource.action`.
+
+## Sinkronisasi ke database
+
+Jalankan:
+
+```bash
+cd backend
+.venv/bin/python -m scripts.sync_permissions
+```
+
+Command bersifat idempotent:
+
+- permission baru ditambahkan;
+- permission yang sudah sama dilewati;
+- konflik metadata dihentikan dengan error eksplisit;
+- role assignment tidak diubah;
+- command aman dijalankan kembali.
+
+Permission yang dikelola registry tidak boleh diubah atau dihapus melalui RBAC API biasa. Perubahan nama/action memerlukan perubahan kode dan review migration.
+
+## Role dan permission assignment
+
+Role tetap merupakan data database:
+
+- role tidak di-hardcode pada router atau service fitur;
+- admin membuat/menentukan role sesuai struktur organisasi;
+- admin memasukkan permission registry ke role;
+- role diberikan ke user;
+- perubahan assignment menghasilkan audit log.
+
+Role template boleh dipakai untuk seed/setup awal, tetapi tidak boleh menimpa role atau assignment yang sudah dimodifikasi admin.
+
+Seeder superadmin memakai registry dan memberikan seluruh permission aplikasi kepada role `superadmin` saat bootstrap.
 
 ## Endpoint RBAC
 
 - `POST /api/rbac/roles`
+- `PUT /api/rbac/roles/{role_id}`
+- `DELETE /api/rbac/roles/{role_id}`
+- `GET /api/rbac/roles/query`
 - `POST /api/rbac/permissions`
+- `PUT /api/rbac/permissions/{permission_id}`
+- `DELETE /api/rbac/permissions/{permission_id}`
+- `GET /api/rbac/permissions/query`
 - `POST /api/rbac/roles/{role_id}/permissions/{permission_id}`
+- `PUT /api/rbac/roles/{role_id}/permissions`
+
+Endpoint `PUT` menggantikan keseluruhan permission role dalam satu transaksi. UI memuat permission role terlebih dahulu, membuka modal pencarian multi-checklist, kemudian mengirim satu daftar final. Endpoint lama satu-permission tetap dipertahankan untuk kompatibilitas.
 - `POST /api/rbac/users/{user_id}/roles/{role_id}`
 - `GET /api/rbac/me/permissions`
 - `GET /api/rbac/me/roles`
@@ -24,96 +134,54 @@ M04 memastikan kontrol akses dijalankan dari backend melalui role dan permission
 - `GET /api/rbac/users/{user_id}/roles`
 - `GET /api/rbac/roles/{role_id}/permissions`
 
-## Aturan keamanan
+Semua endpoint administrasi RBAC tetap memerlukan session valid, CSRF pada write, dan `rbac.manage`.
 
-- Semua endpoint write RBAC memerlukan:
-  - session login valid
-  - CSRF header yang valid (`X-CSRF-Token`)
-  - permission `rbac.manage`
-- Endpoint read `/api/rbac/users/{user_id}/permissions` juga dibatasi dengan permission `rbac.manage`.
+## Pemetaan endpoint
 
-## Struktur modul
+Setiap fitur wajib mendokumentasikan matriks:
 
-- `app/modules/rbac/router.py`
-- `app/modules/rbac/service.py`
-- `app/modules/rbac/repository.py`
-- `app/modules/rbac/schemas.py`
-- `app/modules/rbac/dependencies.py`
+| Operasi | Permission | Endpoint |
+|---|---|---|
+| list/detail | `<feature>.read` | GET |
+| create | `<feature>.create` | POST |
+| update | `<feature>.update` | PUT/PATCH |
+| delete/revoke | permission operasi khusus | DELETE/POST action |
 
-Integrasi auth:
+Contoh Signature:
 
-- dependency `require_permission(...)` menggunakan session auth aktif
-- dependency `require_csrf_protection` dipakai untuk endpoint write
+| Endpoint | Permission |
+|---|---|
+| `GET /api/signatures/query` | `signature.read` |
+| `GET /api/signatures/{id}` | `signature.read` |
+| `GET /api/signatures/{id}/download` | `signature.read` |
+| `POST /api/signatures` | `signature.create` |
+| `POST /api/signatures/{id}/revoke` | `signature.revoke` |
+
+Untuk kompatibilitas, `signature.manage` dan `news.manage` dapat diberlakukan sebagai fallback eksplisit pada endpoint M09. Fallback harus dicantumkan jelas dalam kode dan dokumentasi, bukan wildcard tersembunyi.
+
+## Checklist wajib fitur baru
+
+- [ ] resource dan action fitur didaftarkan;
+- [ ] `permissions.py` dibuat di module;
+- [ ] permission masuk central registry;
+- [ ] nama tervalidasi sebagai `resource.action`;
+- [ ] sync command dijalankan;
+- [ ] endpoint memakai permission guard backend;
+- [ ] operasi write memakai CSRF;
+- [ ] role tidak di-hardcode;
+- [ ] assignment tidak otomatis diberikan kecuali bootstrap superadmin;
+- [ ] frontend menyesuaikan permission untuk UX;
+- [ ] operasi sensitif menulis audit log;
+- [ ] test tanpa permission menghasilkan 403;
+- [ ] test dengan permission menghasilkan hasil yang benar;
+- [ ] test permission lain tidak mendapat akses;
+- [ ] matriks endpoint-permission didokumentasikan.
 
 ## Testing
 
-File:
-
-- `backend/tests/test_rbac.py`
-
-Skenario:
-
-- user tanpa `rbac.manage` mendapat `403 Forbidden` pada endpoint write RBAC
-- user dengan `rbac.manage` dapat:
-  - create role
-  - create permission
-  - assign permission ke role
-  - assign role ke user
-  - membaca permission milik sendiri
-
-## Validasi
-
-Jalankan:
-
 ```bash
-pytest backend/tests/test_auth.py backend/tests/test_rbac.py backend/tests/test_health.py
+cd backend
+.venv/bin/pytest -q tests/test_rbac.py tests/test_m09_signatures.py
 ```
 
-Hasil terakhir: seluruh test lulus.
-
-## Catatan lanjutan
-
-- UI management RBAC di frontend akan dilanjutkan pada milestone UI admin.
-- Seeder data role/permission default bisa ditambahkan pada tahap hardening/ops berikutnya agar bootstrap produksi lebih mudah.
-
-## Alur operasional RBAC (disarankan)
-
-1. Buat role terlebih dahulu sesuai fungsi kerja.
-2. Buat permission dengan pola `resource.action`.
-3. Assign permission ke role.
-4. Assign role ke user.
-5. Verifikasi hasil:
-   - cek role user (`GET /api/rbac/users/{user_id}/roles`)
-   - cek permission role (`GET /api/rbac/roles/{role_id}/permissions`)
-   - uji akses user setelah login ulang.
-
-## Jika ada fitur baru, apa yang harus dilakukan pada RBAC?
-
-Setiap fitur baru wajib dievaluasi terhadap RBAC agar akses tetap aman dan terukur.
-
-1. Definisikan aksi fitur baru (contoh: approve, reject, export, archive).
-2. Tentukan permission baru dengan format `resource.action` (contoh: `news.approve`).
-3. Mapping permission ke role yang tepat (least privilege).
-4. Terapkan pengecekan permission di backend endpoint terkait.
-5. Sesuaikan UI frontend berdasarkan permission untuk UX yang konsisten.
-6. Verifikasi dengan skenario multi-role (boleh vs tidak boleh).
-
-### Contoh singkat
-
-Fitur baru: **Approval Berita**
-- Permission:
-  - `news.approve`
-  - `news.reject`
-- Mapping contoh:
-  - `editor`: tidak memiliki `news.approve`/`news.reject`
-  - `reviewer`: memiliki `news.approve`/`news.reject`
-  - `superadmin`: memiliki semua permission
-
-### Checklist implementasi fitur baru (RBAC)
-
-- [ ] Permission baru sudah ditambahkan (atau reuse permission lama sudah disetujui)
-- [ ] Role mapping sudah ditetapkan
-- [ ] Backend authorization sudah enforced
-- [ ] UI sudah menyesuaikan permission
-- [ ] Test authorization positif/negatif sudah lulus
-- [ ] Dokumentasi endpoint + mapping role diperbarui
+Test M04/M09 mencakup registry unik, granular permission, forbidden access, idempotent synchronization melalui command, proteksi permission registry-managed, dan backward compatibility `manage`.

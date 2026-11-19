@@ -22,6 +22,7 @@ Frontend:
 - Zod
 - Lucide React
 - Tiptap Editor
+- Signature Pad
 
 Backend:
 - Python
@@ -69,7 +70,7 @@ Lihat dokumen [docs/roadmap.md](docs/roadmap.md).
 
 ## Status saat ini
 
-Tahap aktif: M08 File Upload.
+M11 Security & Testing telah selesai untuk baseline keamanan. Milestone berikutnya: M12 Deployment.
 
 Status implementasi:
 - M00 discovery & design foundation telah disiapkan
@@ -82,6 +83,9 @@ Status implementasi:
 - M06 refinement: CRUD users + CRUD RBAC admin page telah diimplementasikan
 - M07 rich text editor (Tiptap) + backend sanitization HTML telah diimplementasikan
 - M08 file upload management (image/PDF) + validasi backend telah diimplementasikan
+- M09 canvas signature, approval record, revoke flow, private signature storage, dan audit trail telah diimplementasikan
+- M10 public comment form, pending moderation queue, approve/reject/delete, sanitization, dan audit trail telah diimplementasikan
+- M11 runtime security settings, PostgreSQL rate limiting, login cooldown, hard caps, dan audit perubahan setting telah diimplementasikan
 
 ## Workflow development vs production
 
@@ -205,7 +209,20 @@ Prinsipnya:
 - migration dijalankan secara eksplisit
 - database tetap aman dan terdokumentasi
 
+## Sinkronisasi permission registry
+
+Permission teknis fitur disimpan dalam `permissions.py` pada setiap module. Setelah menambah fitur atau deploy, sinkronkan permission ke database:
+
+```bash
+cd backend
+.venv/bin/python -m scripts.sync_permissions
+```
+
+Command idempotent. Role dan user assignment tidak otomatis berubah; admin tetap mengaturnya lewat RBAC.
+
 ## Environment variables
+
+Secret, database URL, cookie security, CORS, dan provider credential tetap dikelola environment. Batas upload, komentar, dan rate limit dapat diubah dari Admin Settings, tetapi tidak boleh melewati hard cap deployment.
 
 ### Development
 - DATABASE_URL=postgresql+psycopg://newshub:change_me@localhost:5432/newshub
@@ -234,6 +251,25 @@ Prinsipnya:
 - `POST /api/auth/logout`
   - membutuhkan header `X-CSRF-Token` yang sesuai dengan cookie CSRF
   - menonaktifkan session aktif
+
+## Endpoint signature (M09)
+
+- `GET /api/signatures/query` — list signature dengan pagination dan filter status
+- `POST /api/signatures` — menyimpan PNG signature dan record approval
+- `GET /api/signatures/{signature_id}` — detail signature
+- `POST /api/signatures/{signature_id}/revoke` — mencabut signature dengan alasan audit
+
+Operasi perubahan memerlukan permission `signature.manage` atau `news.manage` dan header CSRF yang valid. File signature bersifat privat, tidak dapat diakses melalui endpoint file publik, dan file bukti tidak dapat dihapus selama signature masih tersimpan.
+
+## Endpoint komentar (M10)
+
+- `GET /api/public/news/{slug}/comments`
+- `POST /api/public/news/{slug}/comments`
+- `GET /api/comments/query`
+- `POST /api/comments/{comment_id}/moderate`
+- `DELETE /api/comments/{comment_id}`
+
+Komentar publik otomatis berstatus `pending`. Hanya komentar `approved` yang dikembalikan pada endpoint publik. Moderasi memakai permission granular `comment.read`, `comment.moderate`, dan `comment.delete`.
 
 Catatan operasional:
 - variabel `SUPERADMIN_*` di `.env` tidak otomatis membuat user di database

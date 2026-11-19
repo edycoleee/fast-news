@@ -1,10 +1,14 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { AdminLayout } from '../features/admin/layout/AdminLayout'
 import { AdminCategoriesPage } from '../features/admin/pages/AdminCategoriesPage'
+import { AdminAuditPage } from '../features/admin/pages/AdminAuditPage'
+import { AdminCommentsPage } from '../features/admin/pages/AdminCommentsPage'
 import { AdminDashboardPage } from '../features/admin/pages/AdminDashboardPage'
 import { AdminFilesPage } from '../features/admin/pages/AdminFilesPage'
 import { AdminNewsPage } from '../features/admin/pages/AdminNewsPage'
 import { AdminRbacPage } from '../features/admin/pages/AdminRbacPage'
+import { AdminSettingsPage } from '../features/admin/pages/AdminSettingsPage'
+import { AdminSignaturesPage } from '../features/admin/pages/AdminSignaturesPage'
 import { AdminUsersPage } from '../features/admin/pages/AdminUsersPage'
 import { RequireAuth } from '../features/auth/components/RequireAuth'
 import { AdminLoginPage } from '../features/auth/pages/AdminLoginPage'
@@ -40,8 +44,12 @@ export function AppRouter() {
         <Route path="users" element={<AdminUsersPage />} />
         <Route path="rbac" element={<AdminRbacPage />} />
         <Route path="categories" element={<AdminCategoriesPage />} />
+        <Route path="audit" element={<AdminAuditPage />} />
+        <Route path="comments" element={<AdminCommentsPage />} />
+        <Route path="settings" element={<AdminSettingsPage />} />
         <Route path="news" element={<AdminNewsPage />} />
         <Route path="files" element={<AdminFilesPage />} />
+        <Route path="signatures" element={<AdminSignaturesPage />} />
         <Route path="reports" element={<PlaceholderPage title="Reports" />} />
         <Route index element={<Navigate to="/admin/dashboard" replace />} />
       </Route>

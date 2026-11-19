@@ -3,7 +3,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { listUsers } from '../api/usersApi'
 import {
-  assignPermissionToRole,
   assignRoleToUser,
   createPermission,
   createRole,
@@ -13,16 +12,19 @@ import {
   getUserRoles,
   listPermissions,
   listRoles,
+  replaceRolePermissions,
 } from '../api/rbacCrudApi'
+import { RolePermissionPicker } from '../components/RolePermissionPicker'
 
 export function AdminRbacPage() {
   const queryClient = useQueryClient()
   const [selectedRoleId, setSelectedRoleId] = useState('')
-  const [selectedPermissionId, setSelectedPermissionId] = useState('')
   const [selectedUserId, setSelectedUserId] = useState('')
   const [selectedRoleForUserId, setSelectedRoleForUserId] = useState('')
   const [selectedUserRoles, setSelectedUserRoles] = useState([])
   const [selectedRolePermissions, setSelectedRolePermissions] = useState([])
+  const [loadedPermissionsRoleId, setLoadedPermissionsRoleId] = useState('')
+  const [showPermissionPicker, setShowPermissionPicker] = useState(false)
 
   const rolesQuery = useQuery({ queryKey: ['rbac-roles'], queryFn: () => listRoles({ page: 1, pageSize: 100 }), retry: false })
   const permissionsQuery = useQuery({
@@ -61,11 +63,11 @@ export function AdminRbacPage() {
       await queryClient.invalidateQueries({ queryKey: ['rbac-permissions'] })
     },
   })
-  const assignPermissionMutation = useMutation({
-    mutationFn: ({ roleId, permissionId }) => assignPermissionToRole(roleId, permissionId),
-    onSuccess: async (_, variables) => {
-      const result = await getRolePermissions(variables.roleId)
+  const replacePermissionsMutation = useMutation({
+    mutationFn: ({ roleId, permissionIds }) => replaceRolePermissions(roleId, permissionIds),
+    onSuccess: async (result) => {
       setSelectedRolePermissions(result.permissions)
+      setShowPermissionPicker(false)
     },
   })
   const assignRoleMutation = useMutation({
@@ -127,7 +129,22 @@ export function AdminRbacPage() {
         <div className="rounded-xl border border-slate-200 bg-white p-5">
           <h3 className="text-base font-semibold text-slate-900">Langkah 3 — Assign Permission to Role</h3>
           <div className="mt-3 grid gap-3">
-            <select value={selectedRoleId} onChange={(event) => setSelectedRoleId(event.target.value)} className="rounded-lg border border-slate-300 px-3 py-2 text-sm">
+            <select
+              data-testid="permission-role-select"
+              value={selectedRoleId}
+              onChange={async (event) => {
+                const roleId = event.target.value
+                setSelectedRoleId(roleId)
+                setLoadedPermissionsRoleId('')
+                setSelectedRolePermissions([])
+                if (roleId) {
+                  const result = await getRolePermissions(roleId)
+                  setSelectedRolePermissions(result.permissions)
+                  setLoadedPermissionsRoleId(roleId)
+                }
+              }}
+              className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            >
               <option value="">Select role</option>
               {rolesQuery.data?.items?.map((role) => (
                 <option key={role.id} value={role.id}>
@@ -135,42 +152,29 @@ export function AdminRbacPage() {
                 </option>
               ))}
             </select>
-            <select value={selectedPermissionId} onChange={(event) => setSelectedPermissionId(event.target.value)} className="rounded-lg border border-slate-300 px-3 py-2 text-sm">
-              <option value="">Select permission</option>
-              {permissionsQuery.data?.items?.map((permission) => (
-                <option key={permission.id} value={permission.id}>
-                  {permission.name}
-                </option>
-              ))}
-            </select>
             <button
+              data-testid="open-permission-picker"
               type="button"
-              onClick={async () => {
-                if (selectedRoleId) {
-                  const result = await getRolePermissions(selectedRoleId)
-                  setSelectedRolePermissions(result.permissions)
-                }
-              }}
-              className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700"
+              disabled={
+                !selectedRoleId ||
+                permissionsQuery.isLoading ||
+                loadedPermissionsRoleId !== selectedRoleId
+              }
+              onClick={() => setShowPermissionPicker(true)}
+              className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
             >
-              Lihat permission role
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                if (selectedRoleId && selectedPermissionId) {
-                  assignPermissionMutation.mutate({ roleId: selectedRoleId, permissionId: selectedPermissionId })
-                }
-              }}
-              className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white"
-            >
-              Assign permission
+              Pilih permission
             </button>
             {selectedRoleId && (
               <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700">
                 <p className="font-semibold text-slate-900">Permission role saat ini:</p>
                 <p className="mt-1">{selectedRolePermissions.length > 0 ? selectedRolePermissions.join(', ') : 'Belum ada permission.'}</p>
               </div>
+            )}
+            {replacePermissionsMutation.isError && (
+              <p className="text-sm text-danger">
+                {replacePermissionsMutation.error?.response?.data?.detail || 'Gagal menyimpan permission role.'}
+              </p>
             )}
           </div>
         </div>
@@ -272,6 +276,28 @@ export function AdminRbacPage() {
           </div>
         </div>
       </section>
+      {showPermissionPicker && selectedRoleId && (
+        <RolePermissionPicker
+          roleName={
+            rolesQuery.data?.items?.find((role) => String(role.id) === selectedRoleId)?.name ||
+            'role'
+          }
+          permissions={permissionsQuery.data?.items || []}
+          selectedIds={
+            (permissionsQuery.data?.items || [])
+              .filter((permission) => selectedRolePermissions.includes(permission.name))
+              .map((permission) => permission.id)
+          }
+          isSaving={replacePermissionsMutation.isPending}
+          onClose={() => setShowPermissionPicker(false)}
+          onSave={(permissionIds) =>
+            replacePermissionsMutation.mutate({
+              roleId: selectedRoleId,
+              permissionIds,
+            })
+          }
+        />
+      )}
     </div>
   )
 }

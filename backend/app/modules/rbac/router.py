@@ -15,6 +15,7 @@ from .schemas import (
     RoleCreateRequest,
     RoleListResponse,
     RolePermissionsResponse,
+    RolePermissionsUpdateRequest,
     RoleResponse,
     RoleUpdateRequest,
     UserPermissionsResponse,
@@ -189,6 +190,26 @@ async def assign_permission_to_role(
         permission_id=permission_id,
     )
     return AssignmentResponse(message='Permission assigned to role.')
+
+
+@router.put(
+    '/roles/{role_id}/permissions',
+    response_model=RolePermissionsResponse,
+    status_code=status.HTTP_200_OK,
+    dependencies=[Depends(require_csrf_protection)],
+)
+async def replace_role_permissions(
+    role_id: int,
+    payload: RolePermissionsUpdateRequest,
+    auth_session: AuthSession = Depends(require_permission(MANAGE_RBAC_PERMISSION)),
+    rbac_service: RBACService = Depends(get_rbac_service),
+) -> RolePermissionsResponse:
+    permissions = await rbac_service.replace_role_permissions(
+        actor_user_id=auth_session.user_id,
+        role_id=role_id,
+        permission_ids=payload.permission_ids,
+    )
+    return RolePermissionsResponse(role_id=role_id, permissions=permissions)
 
 
 @router.post(

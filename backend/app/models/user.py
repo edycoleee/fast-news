@@ -24,4 +24,11 @@ class User(Base):
     auth_sessions: Mapped[list['AuthSession']] = relationship(back_populates='user', cascade='all, delete-orphan')
     news: Mapped[list['News']] = relationship(back_populates='author')
     file_assets: Mapped[list['FileAsset']] = relationship(back_populates='uploaded_by_user')
-    comments: Mapped[list['Comment']] = relationship(back_populates='user')
+    signatures: Mapped[list['Signature']] = relationship(
+        back_populates='signer',
+        foreign_keys='Signature.signer_id',
+    )
+    comments: Mapped[list['Comment']] = relationship(
+        back_populates='user',
+        foreign_keys='Comment.user_id',
+    )

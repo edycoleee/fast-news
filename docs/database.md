@@ -70,9 +70,37 @@
 - news_id
 - user_id
 - parent_id
+- author_name
 - content
 - status
+- moderation_note
+- moderated_by_id
+- moderated_at
 - created_at
+
+Komentar publik dapat memiliki `user_id` nullable. Status dibatasi pada `pending`, `approved`, dan `rejected` melalui database check constraint.
+
+### AppSetting
+- id
+- key
+- category
+- value
+- value_type
+- updated_by_id
+- created_at
+- updated_at
+
+Key unik mengikuti registry code. Nilai runtime divalidasi terhadap schema dan environment hard cap.
+
+### RateLimitBucket
+- id
+- scope
+- identifier
+- window_start
+- count
+- updated_at
+
+Unique constraint pada `scope + identifier + window_start` menjaga integritas bucket fixed-window.
 
 ### FileAsset
 - id
@@ -80,8 +108,24 @@
 - storage_key
 - mime_type
 - size_bytes
+- is_public
 - uploaded_by
 - created_at
+
+### Signature
+- id
+- signer_id
+- news_id
+- file_asset_id
+- purpose
+- status (`active` atau `revoked`)
+- revocation_reason
+- revoked_by_id
+- revoked_at
+- created_at
+- updated_at
+
+Relasi signature menjaga jejak approval. `file_asset_id` bersifat unik dan menggunakan `ON DELETE RESTRICT` agar file bukti tidak hilang ketika record signature masih tersimpan.
 
 ### AuditLog
 - id
@@ -120,6 +164,7 @@ Tahap awal:
 - news
 - comments
 - file assets
+- signatures
 - audit logs
 
 ## 7. Testing database

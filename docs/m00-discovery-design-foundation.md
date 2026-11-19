@@ -103,9 +103,10 @@ Warna utama yang dipakai sejak awal:
 - Success: #10B981
 - Warning: #F59E0B
 - Danger: #EF4444
+- Accent: #14B8A6
 - Background: #F8FAFC
 - Surface: #FFFFFF
-- Text: #111827
+- Text: #0B1220
 
 Aturan penggunaan warna:
 
@@ -114,6 +115,125 @@ Aturan penggunaan warna:
 - 10% accent untuk CTA dan elemen aktif
 - semantic colors hanya untuk status, alert, dan error
 - hindari gradient berlebihan, neon, glassmorphism, dan shadow berlebihan
+
+### Implementasi visual Tailwind
+
+Desain UI mengikuti arah SaaS modern yang profesional, bersih, premium, dan tetap konsisten dengan prinsip enterprise NewsHub.
+
+#### Typography
+
+- font utama: Inter dengan fallback Segoe UI dan sans-serif;
+- heading menggunakan tracking rapat dan hierarchy tegas;
+- body copy ringkas, mudah dipindai, dan mengutamakan readability;
+- headline: besar, langsung menjelaskan nilai;
+- deskripsi: pendek dan tidak bertele-tele;
+- CTA: jelas dan berbentuk action verb.
+
+#### Radius, border, dan spacing
+
+- border radius umum: `rounded-xl`;
+- card/hero utama: `rounded-2xl` atau `rounded-3xl`;
+- border tipis menggunakan slate `200/80`;
+- container utama menggunakan `max-w-7xl mx-auto`;
+- spacing mobile-first dengan breakpoint `sm`, `md`, `lg`, dan `xl`;
+- jarak antar section lebih longgar dibanding jarak antar elemen dalam form.
+
+#### Card
+
+Card produk menggunakan pola:
+
+```html
+bg-white border border-slate-200/80 rounded-2xl shadow-card
+```
+
+Aturan card:
+
+- feature card publik boleh bergerak sedikit saat hover;
+- card operasional admin tetap stabil agar tidak mengganggu aktivitas data;
+- shadow default lembut;
+- shadow lebih kuat hanya untuk modal atau hover card publik;
+- isi card tersusun sebagai ikon/status, judul, deskripsi/nilai, dan action.
+
+#### Glassmorphism dan gradient
+
+Glassmorphism bukan gaya utama NewsHub.
+
+Penggunaan yang diperbolehkan:
+
+- navbar publik;
+- overlay/hero publik;
+- panel status hero;
+- modal overlay transparan.
+
+Penggunaan yang dihindari:
+
+- tabel admin;
+- form data penting;
+- seluruh dashboard;
+- card operasional berisi data padat.
+
+Gradient hanya dipakai terbatas untuk meningkatkan keterbacaan hero atau membedakan layer visual. Jangan memakai gradient sebagai latar semua card atau panel.
+
+#### Micro-interaction
+
+- durasi transisi umum: 200–300ms;
+- hover card publik boleh menggunakan `hover:-translate-y-1`;
+- tabel dan control admin memakai hover border/background yang ringan;
+- focus-visible harus terlihat untuk keyboard navigation;
+- animasi dekoratif harus dihormati dengan preferensi reduced-motion;
+- state loading, disabled, success, empty, dan error harus terlihat jelas.
+
+#### Warna dan kontras
+
+- primary blue dipakai untuk action utama dan focus;
+- secondary blue dipakai untuk navigasi dan struktur utama;
+- accent teal dipakai terbatas untuk health/status dan detail visual;
+- success, warning, dan danger hanya untuk status semantik;
+- text utama memakai slate sangat gelap agar kontras tetap tinggi;
+- elemen penting tidak boleh bergantung hanya pada warna; gunakan label atau ikon.
+
+### Perbedaan konteks public dan admin
+
+#### Public site
+
+- lebih ekspresif dan premium;
+- hero kuat, sticky navbar, feature cards, dan footer;
+- glassmorphism terbatas;
+- CTA jelas;
+- content-first dan nyaman dibaca.
+
+#### Admin site
+
+- enterprise, data-dense, dan operasional;
+- sidebar dark blue dengan navigasi jelas;
+- header sticky putih;
+- tabel, filter, modal, dan form mengutamakan stabilitas;
+- glassmorphism tidak digunakan pada data;
+- shadow dan animasi lebih kecil.
+
+### Komponen UI reusable
+
+Desain harus dibangun melalui reusable components, bukan class ad hoc yang terus diduplikasi:
+
+- `Button`
+- `Card`
+- `Badge`
+- `PageHeader`
+- `Modal`
+- `Input` / `Select` / `Textarea`
+- `EmptyState`
+- `LoadingState`
+- `ErrorState`
+- `DataTable`
+
+Utility global yang disetujui:
+
+- `surface-card`
+- `field-control`
+- `button-primary`
+- `button-secondary`
+
+Komponen dan utility tersebut membantu menjaga warna, spacing, radius, focus, dan transisi tetap konsisten di seluruh modul.
 
 ### Prinsip UI yang dipakai
 
@@ -187,6 +307,104 @@ Aturan penggunaan warna:
 - dependency injection
 - transaction boundary di service/use-case layer
 
+### Standar tanggal dan waktu lintas fitur
+
+Semua waktu dalam NewsHub mengikuti kontrak tunggal agar perilaku antar server, API, dan perangkat pengguna konsisten.
+
+- database menyimpan waktu basis UTC;
+- model baru sebaiknya menggunakan datetime timezone-aware;
+- API mengirim timestamp ISO 8601 dengan timezone, contoh `2026-11-18T02:26:28+00:00`;
+- frontend tidak boleh menganggap timestamp API sebagai waktu lokal tanpa mengetahui timezone;
+- timestamp legacy tanpa offset diperlakukan sebagai UTC untuk kompatibilitas;
+- UI mengonversi timestamp ke timezone lokal browser saat ditampilkan;
+- format UI Indonesia menggunakan tanggal lokal dan jam singkat, contoh `18 Nov 2026, 09.26`;
+- label waktu menjelaskan maknanya, misalnya `Dikirim`, `Dimoderasi`, atau `Dipublikasikan`;
+- timestamp invalid menggunakan fallback aman dan tidak menyebabkan crash.
+
+Alur waktu standar:
+
+```text
+database UTC
+    -> API ISO 8601 ber-timezone
+    -> parser bersama frontend
+    -> Intl.DateTimeFormat
+    -> waktu lokal browser
+```
+
+Parsing dan formatting frontend menggunakan helper bersama, bukan `new Date(value).toLocaleString(...)` berulang di setiap halaman. Dengan helper ini, konversi UTC ke Asia/Jakarta atau timezone browser lain tetap konsisten.
+
+#### Checklist waktu untuk fitur baru
+
+- [ ] field datetime baru memiliki definisi timezone yang jelas;
+- [ ] response API menghasilkan ISO 8601 ber-timezone;
+- [ ] data legacy tanpa timezone mempunyai aturan kompatibilitas;
+- [ ] halaman memakai formatter tanggal bersama;
+- [ ] UI menampilkan label peristiwa dan waktu lokal;
+- [ ] timestamp kosong atau invalid ditangani;
+- [ ] test mencakup timestamp dengan offset dan timestamp legacy tanpa offset.
+
+### Standar RBAC lintas fitur
+
+NewsHub menggunakan pola **Permission-as-Code + Role-as-Data** sebagai fondasi pengembangan seluruh fitur.
+
+- developer mendefinisikan permission teknis pada `permissions.py` milik setiap module;
+- format permission wajib `<resource>.<action>`, contoh `signature.create`;
+- permission module didaftarkan pada central registry;
+- command sinkronisasi memasukkan permission registry ke database secara idempotent;
+- role, relasi role-permission, dan relasi user-role tetap menjadi data database;
+- admin menentukan role yang menerima permission melalui RBAC;
+- user tidak seharusnya mendapat permission langsung di luar role;
+- backend endpoint memeriksa permission, bukan nama role;
+- frontend membaca permission hanya untuk UX, bukan sebagai otoritas keamanan;
+- operasi sensitif tetap memerlukan CSRF dan audit log;
+- permission yang berasal dari registry tidak boleh diubah atau dihapus melalui CRUD RBAC biasa.
+
+Alur standar:
+
+```text
+feature permissions.py
+    -> central permission registry
+    -> sync_permissions command
+    -> tabel permissions
+    -> role_permission
+    -> user_role
+    -> permission guard pada endpoint
+```
+
+Role tidak di-hardcode pada fitur. Assignment role juga tidak di-hardcode. Hanya identifier permission yang eksplisit di kode karena endpoint harus mengetahui kemampuan teknis yang diperiksa.
+
+Contoh pemetaan minimum untuk sebuah fitur approval:
+
+| Operasi | Permission |
+|---|---|
+| melihat data | `signature.read` |
+| membuat approval | `signature.create` |
+| mencabut approval | `signature.revoke` |
+
+Permission `manage` boleh dipakai sebagai kompatibilitas atau akses pengelolaan luas. Operasi sensitif tetap sebaiknya mempunyai permission granular sendiri.
+
+#### Checklist M00 untuk setiap fitur baru
+
+- [ ] resource dan action sudah ditentukan;
+- [ ] module memiliki `permissions.py`;
+- [ ] permission masuk central registry;
+- [ ] permission mengikuti format `resource.action`;
+- [ ] role tidak di-hardcode di endpoint/service;
+- [ ] sync command idempotent dan dapat dicatat;
+- [ ] endpoint memiliki backend permission guard;
+- [ ] write request memiliki CSRF protection;
+- [ ] aksi penting menghasilkan audit log;
+- [ ] test tanpa permission menghasilkan 403;
+- [ ] test permission lain tidak mendapat akses;
+- [ ] dokumentasi matriks endpoint-permission diperbarui.
+- [ ] tampilan waktu mengikuti standar UTC-to-local.
+- [ ] UI memakai design tokens dan reusable components;
+- [ ] layout responsif diuji pada mobile dan desktop;
+- [ ] focus-visible, contrast, loading, error, dan empty state diperiksa;
+- [ ] glassmorphism/gradient tidak mengganggu readability atau density.
+
+Detail implementasi dan operasional RBAC dijaga pada [docs/m04-rbac.md](m04-rbac.md).
+
 ## Output yang diharapkan di M00
 
 1. Design brief dokumentasi awal
@@ -196,6 +414,9 @@ Aturan penggunaan warna:
 5. daftar modul utama yang dibangun pada milestone berikutnya
 6. roadmap M00–M12 yang jelas
 7. update README dan docs indikator project status
+8. standar permission registry dan role-as-data untuk seluruh fitur
+9. standar timestamp API ISO 8601 dan waktu lokal browser
+10. sistem visual Tailwind reusable dan aksesibel
 
 ## Acceptance criteria
 
@@ -205,6 +426,9 @@ Aturan penggunaan warna:
 - struktur modul utama sudah ditentukan
 - roadmap milestone sudah tersusun logis
 - tidak ada scope yang terlalu luas atau ambigua
+- setiap fitur baru memiliki dasar RBAC yang konsisten
+- tampilan waktu mengikuti standar UTC-to-local yang konsisten
+- public site premium dan admin site enterprise menggunakan komponen visual yang konsisten
 
 ## Validation checklist
 
@@ -214,6 +438,9 @@ Aturan penggunaan warna:
 - review arsitektur awal
 - review roadmap logika tahapan
 - pastikan milestone berikutnya bisa dibangun dari hasil M00
+- pastikan fitur baru mengikuti checklist permission registry dan backend guard
+- pastikan timestamp API dan format waktu UI mengikuti standar lintas fitur
+- review mobile-first, keyboard focus, kontras, dan reduced-motion
 
 ## Kesimpulan
 

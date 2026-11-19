@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.audit import AuditLog
 from app.models.file_asset import FileAsset
+from app.models.signature import Signature
 
 
 class FileRepository:
@@ -19,6 +20,7 @@ class FileRepository:
         mime_type: str,
         size_bytes: int,
         uploaded_by: int | None,
+        is_public: bool = True,
     ) -> FileAsset:
         file_asset = FileAsset(
             original_name=original_name,
@@ -26,6 +28,7 @@ class FileRepository:
             mime_type=mime_type,
             size_bytes=size_bytes,
             uploaded_by=uploaded_by,
+            is_public=is_public,
         )
         self.db.add(file_asset)
         await self.db.flush()
@@ -33,6 +36,12 @@ class FileRepository:
 
     async def get_by_id(self, file_id: int) -> FileAsset | None:
         result = await self.db.execute(select(FileAsset).where(FileAsset.id == file_id))
+        return result.scalar_one_or_none()
+
+    async def get_public_by_id(self, file_id: int) -> FileAsset | None:
+        result = await self.db.execute(
+            select(FileAsset).where(FileAsset.id == file_id, FileAsset.is_public.is_(True))
+        )
         return result.scalar_one_or_none()
 
     async def list_paginated(
@@ -68,6 +77,12 @@ class FileRepository:
     async def delete(self, file_asset: FileAsset) -> None:
         await self.db.delete(file_asset)
         await self.db.flush()
+
+    async def is_referenced_by_signature(self, file_asset_id: int) -> bool:
+        result = await self.db.execute(
+            select(Signature.id).where(Signature.file_asset_id == file_asset_id).limit(1)
+        )
+        return result.scalar_one_or_none() is not None
 
     async def add_audit_log(
         self,

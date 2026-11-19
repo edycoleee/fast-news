@@ -22,6 +22,7 @@ from app.models.role import Role
 from app.models.user import User
 from app.models.user_role import RolePermission, UserRole
 from app.modules.auth.security import hash_password
+from app.modules.settings.service import SettingsService
 
 TEST_DB_PATH = Path(__file__).parent / 'test_auth.db'
 TEST_DATABASE_URL = f'sqlite+aiosqlite:///{TEST_DB_PATH}'
@@ -60,6 +61,7 @@ def setup_test_database():
 
 @pytest.fixture(autouse=True)
 def clean_database():
+    SettingsService.clear_cache()
     async def _clean():
         async with test_engine.begin() as connection:
             for table in reversed(Base.metadata.sorted_tables):

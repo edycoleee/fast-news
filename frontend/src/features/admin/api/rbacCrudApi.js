@@ -57,6 +57,15 @@ export async function assignPermissionToRole(roleId, permissionId) {
   return response.data
 }
 
+export async function replaceRolePermissions(roleId, permissionIds) {
+  const response = await apiClient.put(
+    `/api/rbac/roles/${roleId}/permissions`,
+    { permission_ids: permissionIds },
+    { headers: buildCsrfHeaders() },
+  )
+  return response.data
+}
+
 export async function assignRoleToUser(userId, roleId) {
   const response = await apiClient.post(`/api/rbac/users/${userId}/roles/${roleId}`, {}, {
     headers: buildCsrfHeaders(),

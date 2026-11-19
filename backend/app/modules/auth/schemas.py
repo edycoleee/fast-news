@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -26,3 +28,23 @@ class LogoutResponse(BaseModel):
 
 class MeResponse(BaseModel):
     user: AuthUserResponse
+
+
+class AuthSessionResponse(BaseModel):
+    id: int
+    user_id: int
+    username: str | None = None
+    user_agent: str | None
+    ip_address: str | None
+    created_at: datetime
+    last_seen_at: datetime
+    expires_at: datetime
+    is_current: bool
+
+
+class AuthSessionListResponse(BaseModel):
+    items: list[AuthSessionResponse]
+
+
+class SessionRevokeResponse(BaseModel):
+    message: str

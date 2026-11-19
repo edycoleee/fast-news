@@ -19,6 +19,11 @@ applyTo: "backend/**/*.py"
 - Periksa permission di backend.
 - Jangan mengembalikan informasi internal atau secret dalam response.
 - Tambahkan pytest untuk fitur baru.
+- Setiap modul fitur wajib mempunyai `permissions.py` dan permission-nya didaftarkan di RBAC permission registry.
+- Endpoint menggunakan `require_permission(...)` atau `require_any_permission(...)` dengan konstanta dari manifest modul.
+- Role template/assignment tidak boleh di-hardcode di kode fitur; role dan relasi role tetap data database.
+- Permission registry wajib disinkronkan melalui command yang idempotent, bukan dibuat dari input endpoint.
+- Permission yang dikelola registry tidak boleh diubah/dihapus melalui RBAC API biasa.
 - Gunakan type hints.
 - Tangani exception secara konsisten.
 - Jangan menggunakan synchronous database operations di async request handlers.

@@ -14,6 +14,11 @@ class Settings(BaseSettings):
     SESSION_COOKIE_SECURE: bool = False
     UPLOAD_DIR: str = 'storage/uploads'
     UPLOAD_MAX_SIZE_BYTES: int = 5 * 1024 * 1024
+    SIGNATURE_MAX_SIZE_BYTES: int = 512 * 1024
+    UPLOAD_HARD_CAP_BYTES: int = 100 * 1024 * 1024
+    SIGNATURE_HARD_CAP_BYTES: int = 5 * 1024 * 1024
+    COMMENT_HARD_CAP_LENGTH: int = 10_000
+    SECURITY_SETTINGS_CACHE_SECONDS: int = 15
 
 
 settings = Settings()

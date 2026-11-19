@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.models.file_asset import FileAsset
+from app.modules.settings.service import SettingsService
 
 from .repository import FileRepository
 
@@ -29,6 +30,7 @@ class FileService:
     def __init__(self, db: AsyncSession) -> None:
         self.db = db
         self.repository = FileRepository(db)
+        self.settings_service = SettingsService(db)
 
     async def list_files_paginated(
         self,
@@ -45,6 +47,12 @@ class FileService:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='File not found.')
         return file_asset
 
+    async def get_public_file_asset(self, file_id: int) -> FileAsset:
+        file_asset = await self.repository.get_public_by_id(file_id)
+        if file_asset is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='File not found.')
+        return file_asset
+
     async def upload_file(self, *, actor_user_id: int, upload_file: UploadFile) -> FileAsset:
         mime_type = (upload_file.content_type or '').strip().lower()
         if mime_type not in ALLOWED_UPLOAD_MIME_TYPES:
@@ -53,7 +61,8 @@ class FileService:
         file_bytes = await upload_file.read()
         if len(file_bytes) == 0:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='File cannot be empty.')
-        if len(file_bytes) > settings.UPLOAD_MAX_SIZE_BYTES:
+        max_size = int(await self.settings_service.get_value('upload.max_size_bytes'))
+        if len(file_bytes) > max_size:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='File exceeds maximum size.')
 
         self._validate_file_content(mime_type=mime_type, file_bytes=file_bytes)
@@ -88,6 +97,11 @@ class FileService:
 
     async def delete_file(self, *, actor_user_id: int, file_id: int) -> None:
         file_asset = await self.get_file_asset(file_id)
+        if await self.repository.is_referenced_by_signature(file_id):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail='File is retained as signature evidence.',
+            )
         storage_path = Path(settings.UPLOAD_DIR) / file_asset.storage_key
         await self.repository.delete(file_asset)
         await self.repository.add_audit_log(

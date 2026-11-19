@@ -26,3 +26,4 @@ class News(Base):
     author: Mapped['User'] = relationship(back_populates='news')
     category: Mapped['Category | None'] = relationship(back_populates='news')
     comments: Mapped[list['Comment']] = relationship(back_populates='news', cascade='all, delete-orphan')
+    signatures: Mapped[list['Signature']] = relationship(back_populates='news')

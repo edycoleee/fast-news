@@ -59,6 +59,10 @@ class RolePermissionsResponse(BaseModel):
     permissions: list[str]
 
 
+class RolePermissionsUpdateRequest(BaseModel):
+    permission_ids: list[int] = Field(min_length=0, max_length=500)
+
+
 class RoleListResponse(BaseModel):
     items: list[RoleResponse]
     total: int

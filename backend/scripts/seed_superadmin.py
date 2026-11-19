@@ -16,13 +16,7 @@ from app.models.role import Role
 from app.models.user import User
 from app.models.user_role import RolePermission, UserRole
 from app.modules.auth.security import hash_password
-
-REQUIRED_PERMISSIONS = [
-    ('rbac.manage', 'rbac', 'manage'),
-    ('category.manage', 'category', 'manage'),
-    ('news.manage', 'news', 'manage'),
-    ('file.manage', 'file', 'manage'),
-]
+from app.modules.rbac.permission_registry import get_registered_permissions
 
 
 def main() -> None:
@@ -58,10 +52,16 @@ def main() -> None:
             session.add(role)
             session.flush()
 
-        for permission_name, resource, action in REQUIRED_PERMISSIONS:
-            permission = session.execute(select(Permission).where(Permission.name == permission_name)).scalar_one_or_none()
+        for definition in get_registered_permissions():
+            permission = session.execute(
+                select(Permission).where(Permission.name == definition.name)
+            ).scalar_one_or_none()
             if permission is None:
-                permission = Permission(name=permission_name, resource=resource, action=action)
+                permission = Permission(
+                    name=definition.name,
+                    resource=definition.resource,
+                    action=definition.action,
+                )
                 session.add(permission)
                 session.flush()
 

@@ -6,6 +6,8 @@ from fastapi.responses import FileResponse
 from app.models.auth_session import AuthSession
 from app.modules.auth.dependencies import require_csrf_protection
 from app.modules.rbac.dependencies import require_any_permission
+from app.modules.security.dependencies import get_rate_limit_service
+from app.modules.security.rate_limit import RateLimitService
 
 from .dependencies import get_file_service
 from .schemas import FileAssetResponse, FileDeleteResponse, FileListResponse
@@ -45,7 +47,9 @@ async def upload_file(
     upload_file: UploadFile = File(...),
     auth_session: AuthSession = Depends(require_any_permission([MANAGE_FILE_PERMISSION, MANAGE_NEWS_PERMISSION])),
     file_service: FileService = Depends(get_file_service),
+    rate_limit_service: RateLimitService = Depends(get_rate_limit_service),
 ) -> FileAssetResponse:
+    await rate_limit_service.check_upload(auth_session.user_id)
     file_asset = await file_service.upload_file(actor_user_id=auth_session.user_id, upload_file=upload_file)
     return FileAssetResponse.model_validate(file_asset)
 
@@ -66,7 +70,7 @@ async def download_public_file(
     file_id: int,
     file_service: FileService = Depends(get_file_service),
 ) -> FileResponse:
-    file_asset = await file_service.get_file_asset(file_id)
+    file_asset = await file_service.get_public_file_asset(file_id)
     storage_path = file_service.get_storage_path(file_asset)
     return FileResponse(path=storage_path, media_type=file_asset.mime_type, filename=file_asset.original_name)
 

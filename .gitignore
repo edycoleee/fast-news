@@ -9,3 +9,8 @@ backend/.venv/
 backend/__pycache__/
 backend/.pytest_cache/
 backend/.coverage
+storage/
+backups/
+
+*.pyc
+*.*.pyc

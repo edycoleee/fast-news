@@ -110,6 +110,46 @@ class RBACRepository:
         self.db.add(link)
         await self.db.flush()
 
+    async def list_permissions_by_ids(self, permission_ids: list[int]) -> list[Permission]:
+        if not permission_ids:
+            return []
+        result = await self.db.execute(
+            select(Permission).where(Permission.id.in_(permission_ids))
+        )
+        return list(result.scalars().all())
+
+    async def list_role_permission_ids(self, role_id: int) -> list[int]:
+        result = await self.db.execute(
+            select(RolePermission.permission_id).where(RolePermission.role_id == role_id)
+        )
+        return list(result.scalars().all())
+
+    async def replace_role_permissions(
+        self,
+        *,
+        role_id: int,
+        permission_ids: list[int],
+    ) -> tuple[list[int], list[int]]:
+        current_ids = set(await self.list_role_permission_ids(role_id))
+        requested_ids = set(permission_ids)
+        added_ids = sorted(requested_ids - current_ids)
+        removed_ids = sorted(current_ids - requested_ids)
+
+        if removed_ids:
+            await self.db.execute(
+                RolePermission.__table__.delete().where(
+                    RolePermission.role_id == role_id,
+                    RolePermission.permission_id.in_(removed_ids),
+                )
+            )
+        if added_ids:
+            self.db.add_all(
+                RolePermission(role_id=role_id, permission_id=permission_id)
+                for permission_id in added_ids
+            )
+        await self.db.flush()
+        return added_ids, removed_ids
+
     async def delete_role(self, role: Role) -> None:
         await self.db.delete(role)
         await self.db.flush()

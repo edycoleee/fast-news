@@ -8,6 +8,7 @@ from app.models.permission import Permission
 from app.models.role import Role
 
 from .repository import RBACRepository
+from .permission_registry import get_registered_permission_names
 
 
 class RBACService:
@@ -119,6 +120,11 @@ class RBACService:
         permission = await self.repository.get_permission_by_id(permission_id)
         if permission is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Permission not found.')
+        if permission.name in get_registered_permission_names():
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail='Registry-managed permission cannot be changed through RBAC API.',
+            )
 
         if name is not None:
             normalized_name = name.strip().lower()
@@ -197,6 +203,44 @@ class RBACService:
         )
         await self.db.commit()
 
+    async def replace_role_permissions(
+        self,
+        *,
+        actor_user_id: int,
+        role_id: int,
+        permission_ids: list[int],
+    ) -> list[str]:
+        role = await self.repository.get_role_by_id(role_id)
+        if role is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Role not found.')
+
+        unique_permission_ids = sorted(set(permission_ids))
+        permissions = await self.repository.list_permissions_by_ids(unique_permission_ids)
+        if len(permissions) != len(unique_permission_ids):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail='One or more permissions do not exist.',
+            )
+
+        added_ids, removed_ids = await self.repository.replace_role_permissions(
+            role_id=role_id,
+            permission_ids=unique_permission_ids,
+        )
+        await self.repository.add_audit_log(
+            actor_user_id=actor_user_id,
+            action='rbac.role.replace_permissions',
+            entity_type='role',
+            entity_id=role_id,
+            details={
+                'role': role.name,
+                'permission_ids': unique_permission_ids,
+                'added_ids': added_ids,
+                'removed_ids': removed_ids,
+            },
+        )
+        await self.db.commit()
+        return await self.repository.list_role_permission_names(role_id)
+
     async def delete_role(self, *, actor_user_id: int, role_id: int) -> None:
         role = await self.repository.get_role_by_id(role_id)
         if role is None:
@@ -215,6 +259,11 @@ class RBACService:
         permission = await self.repository.get_permission_by_id(permission_id)
         if permission is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Permission not found.')
+        if permission.name in get_registered_permission_names():
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail='Registry-managed permission cannot be deleted through RBAC API.',
+            )
         await self.repository.delete_permission(permission)
         await self.repository.add_audit_log(
             actor_user_id=actor_user_id,

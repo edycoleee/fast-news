@@ -39,6 +39,7 @@ Backend:
     - categories/
     - comments/
     - files/
+    - signatures/
     - audit/
 
 Setiap module berisi:
@@ -120,6 +121,14 @@ Untuk detail lengkap lihat [docs/roadmap.md](roadmap.md).
 - Menggunakan modular monolith agar pengembangan bertahap tetap manageable.
 - Menjaga database dan UI terpisah agar lebih mudah di-scale dan di-test.
 - Menggunakan transaction boundary di service layer untuk operasi multi tabel.
+- Menyimpan PNG signature sebagai `FileAsset` privat dan record approval sebagai entitas terpisah.
+- Menjamin file, signature, dan audit log dibuat dalam satu transaksi database; file sementara dibersihkan jika transaksi gagal.
 - Menggunakan Alembic untuk semua perubahan skema database.
 - Menjaga backend sebagai sumber kebenaran auth dan permission.
 - Menganggap design system sebagai bagian dari roadmap, bukan dekorasi akhir.
+- Menggunakan Permission-as-Code + Role-as-Data: module memiliki manifest permission, sedangkan role dan assignment tetap dikelola sebagai data.
+- Melarang permission registry-managed diubah melalui CRUD RBAC biasa agar kontrak endpoint tidak menyimpang.
+- Memisahkan public comment write/read dari admin moderation; publik hanya membaca komentar approved.
+- Menyimpan komentar tamu dengan `user_id` nullable dan menjaga audit/moderation metadata terpisah.
+- Memisahkan runtime settings dari infrastructure secret: settings database divalidasi registry, secret dan hard cap tetap environment.
+- Menggunakan PostgreSQL-backed fixed-window rate limit agar anti-abuse konsisten pada seluruh process backend.
